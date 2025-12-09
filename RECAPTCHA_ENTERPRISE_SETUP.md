@@ -173,3 +173,4 @@ Default threshold is 0.5. Adjust based on your security needs.
 5. **Use environment variables** for all sensitive configuration
 6. **Enable logging** to track reCAPTCHA assessments
 
+

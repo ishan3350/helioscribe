@@ -106,3 +106,4 @@ REACT_APP_API_URL=http://localhost:5000/api
 4. **Check domain settings** - Ensure `localhost` is added for development
 5. **Clear browser cache** - Sometimes cached scripts cause issues
 
+

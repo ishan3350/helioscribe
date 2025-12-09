@@ -46,7 +46,7 @@ const VerifyEmail = () => {
       if (response.success) {
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify(response.user));
-        toast.success('Email verified successfully! Redirecting to dashboard...', {
+        toast.success('Email verified successfully! Taking you to your dashboard...', {
           position: 'top-right',
           autoClose: 2000,
         });
@@ -54,7 +54,7 @@ const VerifyEmail = () => {
           navigate('/dashboard');
         }, 500);
       } else {
-        const errorMessage = response.message || 'Verification failed. Please check your code and try again.';
+        const errorMessage = response.message || 'The verification code you entered is incorrect. Please check the code and try again.';
         setError(errorMessage);
         toast.error(errorMessage, {
           position: 'top-right',
@@ -82,7 +82,7 @@ const VerifyEmail = () => {
     try {
       const response = await resendVerificationCode(email);
       if (response.success) {
-        toast.success('Verification code sent to your email');
+        toast.success('A new verification code has been sent to your email address. Please check your inbox.');
       }
     } catch (error) {
       const errorMessage = formatErrorForDisplay(error);

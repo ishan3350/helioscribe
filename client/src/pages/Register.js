@@ -30,15 +30,15 @@ const Register = () => {
     const error = searchParams.get('error');
     if (error && !errorShownRef.current) {
       errorShownRef.current = true;
-      let errorMessage = 'Authentication failed. Please try again.';
+      let errorMessage = 'We encountered an issue during registration. Please try again.';
       if (error === 'google_auth_failed') {
-        errorMessage = 'Google authentication failed. Please try again.';
+        errorMessage = 'We couldn\'t complete your Google registration. Please try again or create an account with your email.';
       } else if (error === 'google_auth_no_email') {
-        errorMessage = 'Unable to retrieve email from Google account.';
+        errorMessage = 'We couldn\'t retrieve your email address from Google. Please ensure your Google account has a verified email address.';
       } else if (error === 'google_auth_already_registered') {
-        errorMessage = 'This email is already registered. Please login instead.';
+        errorMessage = 'This email is already registered. Please sign in instead or use a different email address.';
       } else if (error === 'google_auth_email_not_verified') {
-        errorMessage = 'Your Google email is not verified. Please verify your email with Google first.';
+        errorMessage = 'Your Google email address needs to be verified. Please verify your email with Google and try again.';
       }
       toast.error(errorMessage);
       // Remove error from URL immediately
@@ -190,7 +190,7 @@ const Register = () => {
       // Execute reCAPTCHA v3 (invisible, automatic)
       const token = await executeRecaptcha();
       if (!token) {
-        toast.error('Security verification failed. Please refresh the page and try again.', {
+        toast.error('Security verification couldn\'t be completed. Please refresh the page and try again.', {
           position: 'top-right',
           autoClose: 5000,
         });
@@ -204,7 +204,7 @@ const Register = () => {
       const response = await register(userData);
 
       if (response.success) {
-        toast.success('Account created successfully! Please check your email for the verification code.', {
+        toast.success('Account created successfully! We\'ve sent a verification code to your email. Please check your inbox.', {
           position: 'top-right',
           autoClose: 4000,
         });
@@ -214,7 +214,7 @@ const Register = () => {
           });
         }, 500);
       } else {
-        const errorMessage = response.message || 'Registration failed. Please check your information and try again.';
+        const errorMessage = response.message || 'We couldn\'t create your account. Please review your information and try again.';
         toast.error(errorMessage, {
           position: 'top-right',
           autoClose: 5000,

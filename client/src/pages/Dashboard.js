@@ -42,7 +42,7 @@ const Dashboard = () => {
           // Show success message only once if we just logged in via OAuth
           if (urlToken && !successMessageShown.current) {
             successMessageShown.current = true;
-            toast.success('Successfully signed in!', {
+            toast.success('Welcome! You\'ve been successfully signed in.', {
               position: 'top-right',
               autoClose: 2000,
             });
@@ -72,7 +72,7 @@ const Dashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    toast.success('Logged out successfully');
+    toast.success('You\'ve been signed out successfully. We hope to see you again soon!');
     navigate('/login');
   };
 

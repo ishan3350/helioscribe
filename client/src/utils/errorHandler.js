@@ -10,8 +10,8 @@
  */
 export const extractErrorMessage = (error) => {
   // Default error message
-  let message = 'An unexpected error occurred. Please try again.';
-  let title = 'Error';
+  let message = 'We encountered an unexpected issue. Please try again. If the problem continues, contact our support team.';
+  let title = 'Something Went Wrong';
   let type = 'error';
   let statusCode = null;
   let errorCode = null;
@@ -19,8 +19,8 @@ export const extractErrorMessage = (error) => {
   // Network errors (no response from server)
   if (!error.response) {
     if (error.request) {
-      message = 'Unable to connect to the server. Please check your internet connection and try again.';
-      title = 'Connection Error';
+      message = 'We\'re having trouble connecting to our servers. Please check your internet connection and try again.';
+      title = 'Connection Issue';
       type = 'network';
     } else if (error.message) {
       message = error.message;
@@ -56,9 +56,9 @@ export const extractErrorMessage = (error) => {
   // Map HTTP status codes to professional messages
   switch (statusCode) {
     case 400:
-      title = 'Invalid Request';
+      title = 'Invalid Information';
       if (!message || (message.includes('Invalid') && !message.includes('credentials'))) {
-        message = 'The information you provided is invalid. Please check your input and try again.';
+        message = 'Some of the information you provided isn\'t valid. Please review your input and try again.';
       }
       break;
     case 401:
@@ -75,18 +75,18 @@ export const extractErrorMessage = (error) => {
       );
       
       if (isInvalidCredentials) {
-        title = 'Invalid Credentials';
-        message = 'The email or password you entered is incorrect. Please verify your credentials and try again.';
+        title = 'Sign-In Failed';
+        message = 'The email or password you entered is incorrect. Please check your credentials and try again.';
         type = 'invalidCredentials';
       } else {
         // Generic 401 - session expired or unauthorized
-        title = 'Authentication Required';
-        message = message || 'Your session has expired or you are not authorized. Please sign in again.';
+        title = 'Session Expired';
+        message = message || 'Your session has expired. Please sign in again to continue.';
         type = 'auth';
       }
       break;
     case 403:
-      title = 'Access Denied';
+      title = 'Access Restricted';
       // Check if this is a Google OAuth account error
       const apiMessage403 = originalMessage || message || '';
       const isGoogleOAuthError = response.data?.authMethod === 'google' || 
@@ -99,7 +99,7 @@ export const extractErrorMessage = (error) => {
         type = 'googleOAuth';
       } else if (!originalMessage || originalMessage === message) {
         // Only use generic message if no specific message was provided
-        message = 'You do not have permission to perform this action.';
+        message = 'You don\'t have permission to perform this action. If you believe this is an error, please contact support.';
         type = 'permission';
       } else {
         // Use the original message if it's different
@@ -109,42 +109,42 @@ export const extractErrorMessage = (error) => {
       break;
     case 404:
       title = 'Not Found';
-      message = 'The requested resource could not be found.';
+      message = 'The information you\'re looking for couldn\'t be found. It may have been moved or deleted.';
       type = 'notFound';
       break;
     case 409:
-      title = 'Conflict';
+      title = 'Already Exists';
       if (!message || message.includes('already')) {
-        message = 'This resource already exists. Please use a different value.';
+        message = 'This information already exists in our system. Please use a different value or sign in if you already have an account.';
       }
       break;
     case 422:
       title = 'Validation Error';
-      message = 'Please check your input and ensure all required fields are filled correctly.';
+      message = 'Some of the information you provided isn\'t in the correct format. Please review all fields and try again.';
       break;
     case 429:
       title = 'Too Many Requests';
-      message = 'You have made too many requests. Please wait a moment and try again.';
+      message = 'You\'ve made too many requests in a short time. Please wait a moment before trying again.';
       type = 'rateLimit';
       break;
     case 500:
       title = 'Server Error';
-      message = 'An internal server error occurred. Our team has been notified. Please try again later.';
+      message = 'We\'re experiencing technical difficulties. Our team has been notified and is working on a fix. Please try again in a few moments.';
       type = 'server';
       break;
     case 503:
       title = 'Service Unavailable';
-      message = 'The service is temporarily unavailable. Please try again in a few moments.';
+      message = 'Our service is temporarily unavailable. We\'re working to restore it as quickly as possible. Please try again shortly.';
       type = 'service';
       break;
     default:
       if (statusCode >= 500) {
         title = 'Server Error';
-        message = 'A server error occurred. Please try again later.';
+        message = 'We\'re experiencing a server issue. Please try again in a few moments. If the problem persists, contact our support team.';
         type = 'server';
       } else if (statusCode >= 400) {
         title = 'Request Error';
-        message = message || 'An error occurred processing your request.';
+        message = message || 'We couldn\'t process your request. Please try again or contact support if the issue continues.';
       }
   }
 
@@ -159,16 +159,13 @@ export const extractErrorMessage = (error) => {
 export const formatErrorForDisplay = (error) => {
   const { message, title, type } = extractErrorMessage(error);
   
-  // For invalid credentials, show a more user-friendly message without the title prefix
-  if (type === 'invalidCredentials') {
-    return message; // Already includes "Invalid Credentials" context
+  // For invalid credentials and common errors, show message without title prefix for cleaner UX
+  if (type === 'invalidCredentials' || type === 'googleOAuth') {
+    return message; // Message is already user-friendly and complete
   }
   
-  // For enterprise applications, we show title and message
-  if (title && title !== 'Error') {
-    return `${title}: ${message}`;
-  }
-  
+  // For other errors, show just the message (title is redundant in toast notifications)
+  // The toast styling will indicate the error type visually
   return message;
 };
 

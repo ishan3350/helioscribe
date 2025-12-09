@@ -6,19 +6,6 @@
   padding: 24px;
   background: var(--background-secondary);
   position: relative;
-  overflow: hidden;
-}
-
-.auth-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 300px;
-  background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
-  opacity: 0.05;
-  z-index: 0;
 }
 
 .auth-card {
