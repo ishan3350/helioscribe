@@ -2,96 +2,31 @@
   min-height: 100vh;
   background-color: var(--background-secondary);
   display: flex;
+  position: relative;
+}
+
+.dashboard-wrapper {
+  flex: 1;
+  margin-left: 280px;
+  min-height: 100vh;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
   flex-direction: column;
 }
 
-.dashboard-header {
-  background: var(--background);
-  border-bottom: 1px solid var(--border-color);
-  padding: 0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(10px);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.header-content {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 24px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 64px;
-}
-
-.dashboard-logo {
-  font-size: 22px;
-  font-weight: 500;
-  color: var(--primary-color);
-  letter-spacing: -0.3px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.user-name {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  padding: 8px 12px;
-  background: var(--background-secondary);
-  border-radius: var(--radius-md);
-  display: none;
-}
-
-.logout-button {
-  padding: 10px 20px;
-  background: var(--background);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-  font-family: inherit;
-  letter-spacing: 0.1px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.logout-button::before {
-  content: '→';
-  font-size: 16px;
-}
-
-.logout-button:hover {
-  background: var(--background-secondary);
-  border-color: var(--text-tertiary);
-  box-shadow: var(--shadow-sm);
-}
-
-.logout-button:active {
-  box-shadow: none;
+/* Adjust margin when sidebar is collapsed (desktop only) */
+@media (min-width: 1024px) {
+  aside.sidebar.collapsed ~ .dashboard-wrapper {
+    margin-left: 64px;
+  }
 }
 
 .dashboard-main {
   flex: 1;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 40px 24px;
+  padding: 40px 32px;
   width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .welcome-section {
@@ -339,9 +274,24 @@
 }
 
 /* Responsive Design */
-@media (max-width: 1024px) {
+@media (max-width: 1279px) {
+  .dashboard-wrapper {
+    margin-left: 256px;
+  }
+  
+  aside.sidebar.collapsed ~ .dashboard-wrapper {
+    margin-left: 64px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .dashboard-wrapper {
+    margin-left: 0;
+  }
+
   .dashboard-main {
-    padding: 32px 20px;
+    padding: 24px 20px;
+    padding-top: 72px; /* Space for mobile menu button */
   }
 
   .dashboard-grid {
@@ -351,21 +301,9 @@
 }
 
 @media (max-width: 768px) {
-  .dashboard-header {
-    padding: 0;
-  }
-
-  .header-content {
-    padding: 0 16px;
-    height: 56px;
-  }
-
-  .dashboard-logo {
-    font-size: 20px;
-  }
-
   .dashboard-main {
-    padding: 24px 16px;
+    padding: 20px 16px;
+    padding-top: 72px;
   }
 
   .welcome-section {
@@ -400,24 +338,12 @@
     padding-left: 20px;
     padding-right: 20px;
   }
-
-  .user-name {
-    display: none;
-  }
-
-  .logout-button {
-    padding: 8px 16px;
-    font-size: 13px;
-  }
 }
 
 @media (max-width: 480px) {
-  .header-content {
-    padding: 0 12px;
-  }
-
   .dashboard-main {
-    padding: 20px 12px;
+    padding: 16px 12px;
+    padding-top: 72px;
   }
 
   .welcome-section h2 {
@@ -451,15 +377,6 @@
 
 /* Print styles */
 @media print {
-  .dashboard-header {
-    position: static;
-    box-shadow: none;
-  }
-
-  .logout-button {
-    display: none;
-  }
-
   .dashboard-card {
     box-shadow: none;
     border: 1px solid var(--border-color);
