@@ -1,0 +1,44 @@
+.App {
+  min-height: 100vh;
+}
+
+/* Custom Toast Styles */
+.custom-toast {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(60, 64, 67, 0.2), 0 4px 16px rgba(60, 64, 67, 0.1);
+  font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  padding: 16px;
+  border: 1px solid rgba(60, 64, 67, 0.1);
+}
+
+.custom-progress {
+  background: rgba(26, 115, 232, 0.2);
+}
+
+.Toastify__toast--success {
+  background: #ffffff;
+  color: #202124;
+  border-left: 4px solid #34a853;
+}
+
+.Toastify__toast--error {
+  background: #ffffff;
+  color: #202124;
+  border-left: 4px solid #ea4335;
+}
+
+.Toastify__toast--info {
+  background: #ffffff;
+  color: #202124;
+  border-left: 4px solid #1a73e8;
+}
+
+.Toastify__close-button {
+  color: #5f6368;
+  opacity: 0.7;
+}
+
+.Toastify__close-button:hover {
+  opacity: 1;
+}
