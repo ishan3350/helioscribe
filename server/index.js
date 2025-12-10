@@ -10,6 +10,7 @@ require('dotenv').config();
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
+const securityRoutes = require('./routes/security');
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/security', securityRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {

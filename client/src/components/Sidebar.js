@@ -49,7 +49,7 @@ const Sidebar = ({ user, onLogout }) => {
     {
       id: 'settings',
       label: 'Settings',
-      path: '/dashboard/settings',
+      path: '/dashboard/settings/security',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19.14 12.94C19.18 12.64 19.2 12.33 19.2 12C19.2 11.67 19.18 11.36 19.14 11.06L21.16 9.37C21.34 9.22 21.4 8.97 21.3 8.74L19.3 5.26C19.2 5.03 18.97 4.88 18.73 4.88H15.07C14.7 4.54 14.3 4.25 13.87 4.02L13.49 0.74C13.46 0.5 13.25 0.32 13.01 0.32H10.99C10.75 0.32 10.54 0.5 10.51 0.74L10.13 4.02C9.7 4.25 9.3 4.54 8.93 4.88H5.27C5.03 4.88 4.8 5.03 4.7 5.26L2.7 8.74C2.6 8.97 2.66 9.22 2.84 9.37L4.86 11.06C4.82 11.36 4.8 11.67 4.8 12C4.8 12.33 4.82 12.64 4.86 12.94L2.84 14.63C2.66 14.78 2.6 15.03 2.7 15.26L4.7 18.74C4.8 18.97 5.03 19.12 5.27 19.12H8.93C9.3 19.46 9.7 19.75 10.13 19.98L10.51 23.26C10.54 23.5 10.75 23.68 10.99 23.68H13.01C13.25 23.68 13.46 23.5 13.49 23.26L13.87 19.98C14.3 19.75 14.7 19.46 15.07 19.12H18.73C18.97 19.12 19.2 18.97 19.3 18.74L21.3 15.26C21.4 15.03 21.34 14.78 21.16 14.63L19.14 12.94ZM12 15.6C10.02 15.6 8.4 13.98 8.4 12C8.4 10.02 10.02 8.4 12 8.4C13.98 8.4 15.6 10.02 15.6 12C15.6 13.98 13.98 15.6 12 15.6Z" fill="currentColor"/>
@@ -76,7 +76,30 @@ const Sidebar = ({ user, onLogout }) => {
   };
 
   const isActive = (path) => {
-    return location.pathname === path || location.pathname.startsWith(path + '/');
+    const currentPath = location.pathname;
+    
+    // Normalize paths (remove trailing slashes for comparison)
+    const normalizedCurrent = currentPath.replace(/\/$/, '');
+    const normalizedPath = path.replace(/\/$/, '');
+    
+    // Exact match
+    if (normalizedCurrent === normalizedPath) {
+      return true;
+    }
+    
+    // For dashboard home (/dashboard), only match exactly, not sub-routes
+    if (normalizedPath === '/dashboard') {
+      return normalizedCurrent === '/dashboard';
+    }
+    
+    // For other paths, check if current path starts with the path followed by /
+    // This ensures /dashboard/settings/security matches /dashboard/settings/security
+    // but /dashboard/settings/security doesn't match /dashboard
+    if (normalizedCurrent.startsWith(normalizedPath + '/')) {
+      return true;
+    }
+    
+    return false;
   };
 
   const toggleMobileMenu = () => {

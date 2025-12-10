@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Routes, Route, Outlet } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { getDashboardData } from '../services/authService';
 import { formatErrorForDisplay } from '../utils/errorHandler';
 import Sidebar from '../components/Sidebar';
+import Security from './Security';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -105,76 +106,85 @@ const Dashboard = () => {
       
       <div className="dashboard-wrapper">
         <main className="dashboard-main">
-          <div className="dashboard-content">
-            <div className="welcome-section">
-              <h2>Welcome back, {user?.firstName}</h2>
-              <p>Account overview and information</p>
+          <Routes>
+            <Route path="/" element={<DashboardHome user={user} formatDate={formatDate} />} />
+            <Route path="settings/security" element={<Security />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+const DashboardHome = ({ user, formatDate }) => {
+  return (
+    <div className="dashboard-content">
+      <div className="welcome-section">
+        <h2>Welcome back, {user?.firstName}</h2>
+        <p>Account overview and information</p>
+      </div>
+
+      <div className="dashboard-grid">
+        <div className="dashboard-card profile-card">
+          <div className="card-header">
+            <h3>Profile Information</h3>
+          </div>
+          <div className="card-content">
+            <div className="info-item">
+              <span className="info-label">Full Name</span>
+              <span className="info-value">
+                {user?.firstName} {user?.lastName}
+              </span>
             </div>
+            <div className="info-item">
+              <span className="info-label">Email</span>
+              <span className="info-value">{user?.email}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Phone</span>
+              <span className="info-value">{user?.phone}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">Address</span>
+              <span className="info-value">{user?.address}</span>
+            </div>
+            <div className="info-item">
+              <span className="info-label">How You Heard About Us</span>
+              <span className="info-value">{user?.howHeard}</span>
+            </div>
+          </div>
+        </div>
 
-            <div className="dashboard-grid">
-              <div className="dashboard-card profile-card">
-                <div className="card-header">
-                  <h3>Profile Information</h3>
-                </div>
-                <div className="card-content">
-                  <div className="info-item">
-                    <span className="info-label">Full Name</span>
-                    <span className="info-value">
-                      {user?.firstName} {user?.lastName}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Email</span>
-                    <span className="info-value">{user?.email}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Phone</span>
-                    <span className="info-value">{user?.phone}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Address</span>
-                    <span className="info-value">{user?.address}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">How You Heard About Us</span>
-                    <span className="info-value">{user?.howHeard}</span>
-                  </div>
-                </div>
+        <div className="dashboard-card stats-card">
+          <div className="card-header">
+            <h3>Account Statistics</h3>
+          </div>
+          <div className="card-content">
+            <div className="stat-item">
+              <div className="stat-indicator verified-indicator"></div>
+              <div className="stat-details">
+                <span className="stat-label">Email Status</span>
+                <span className="stat-value verified">
+                  {user?.isEmailVerified ? 'Verified' : 'Not Verified'}
+                </span>
               </div>
-
-              <div className="dashboard-card stats-card">
-                <div className="card-header">
-                  <h3>Account Statistics</h3>
-                </div>
-                <div className="card-content">
-                  <div className="stat-item">
-                    <div className="stat-indicator verified-indicator"></div>
-                    <div className="stat-details">
-                      <span className="stat-label">Email Status</span>
-                      <span className="stat-value verified">
-                        {user?.isEmailVerified ? 'Verified' : 'Not Verified'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-indicator date-indicator"></div>
-                    <div className="stat-details">
-                      <span className="stat-label">Account Created</span>
-                      <span className="stat-value">{formatDate(user?.createdAt)}</span>
-                    </div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-indicator time-indicator"></div>
-                    <div className="stat-details">
-                      <span className="stat-label">Last Login</span>
-                      <span className="stat-value">{formatDate(user?.lastLogin)}</span>
-                    </div>
-                  </div>
-                </div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-indicator date-indicator"></div>
+              <div className="stat-details">
+                <span className="stat-label">Account Created</span>
+                <span className="stat-value">{formatDate(user?.createdAt)}</span>
+              </div>
+            </div>
+            <div className="stat-item">
+              <div className="stat-indicator time-indicator"></div>
+              <div className="stat-details">
+                <span className="stat-label">Last Login</span>
+                <span className="stat-value">{formatDate(user?.lastLogin)}</span>
               </div>
             </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );

@@ -15,8 +15,13 @@ export const resendVerificationCode = async (email) => {
   return response.data;
 };
 
-export const login = async (email, password, recaptchaToken) => {
-  const response = await api.post('/auth/login', { email, password, recaptchaToken });
+export const login = async (email, password, recaptchaToken, mfaToken = null) => {
+  const response = await api.post('/auth/login', { 
+    email, 
+    password, 
+    recaptchaToken,
+    ...(mfaToken && { mfaToken })
+  });
   return response.data;
 };
 
@@ -56,6 +61,35 @@ export const resetPassword = async (resetToken, newPassword) => {
     resetToken, 
     newPassword 
   });
+  return response.data;
+};
+
+// Security/Account Management
+export const changePassword = async (currentPassword, newPassword) => {
+  const response = await api.post('/security/change-password', {
+    currentPassword,
+    newPassword
+  });
+  return response.data;
+};
+
+export const getMFAStatus = async () => {
+  const response = await api.get('/security/mfa/status');
+  return response.data;
+};
+
+export const setupMFA = async () => {
+  const response = await api.get('/security/mfa/setup');
+  return response.data;
+};
+
+export const verifyMFA = async (token) => {
+  const response = await api.post('/security/mfa/verify', { token });
+  return response.data;
+};
+
+export const disableMFA = async (password) => {
+  const response = await api.post('/security/mfa/disable', { password });
   return response.data;
 };
 

@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const speakeasy = require('speakeasy');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
 const generateResetToken = require('../utils/generateResetToken');
@@ -321,14 +322,18 @@ router.post('/resend-verification', [
 });
 
 // @route   POST /api/auth/login
-// @desc    Login user
+// @desc    Login user (with 2FA support)
 // @access  Public
 router.post('/login', [
   body('email')
     .isEmail().withMessage('Please enter a valid email')
     .normalizeEmail(),
   body('password')
-    .notEmpty().withMessage('Password is required')
+    .notEmpty().withMessage('Password is required'),
+  body('mfaToken')
+    .optional()
+    .isLength({ min: 6, max: 6 }).withMessage('MFA token must be 6 digits')
+    .matches(/^\d+$/).withMessage('MFA token must contain only numbers')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -339,49 +344,52 @@ router.post('/login', [
       });
     }
 
-    const { email, password, recaptchaToken } = req.body;
+    const { email, password, recaptchaToken, mfaToken } = req.body;
 
-    // Verify reCAPTCHA token
-    if (!recaptchaToken) {
-      return res.status(400).json({
-        success: false,
-        message: 'reCAPTCHA verification is required'
-      });
-    }
-
-    // Get client IP address for reCAPTCHA verification
-    const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || 
-                     req.headers['x-real-ip'] || 
-                     req.connection.remoteAddress || 
-                     req.socket.remoteAddress ||
-                     (req.connection.socket ? req.connection.socket.remoteAddress : null);
-
-    // Verify reCAPTCHA (v3 will check score automatically)
-    const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIP);
-    
-    if (!recaptchaResult.success) {
-      console.error('reCAPTCHA verification failed for login:', {
-        error: recaptchaResult.error,
-        errorCodes: recaptchaResult.errorCodes,
-        ip: clientIP
-      });
-      
-      // Provide user-friendly error message
-      let userMessage = 'reCAPTCHA verification failed. Please try again.';
-      if (recaptchaResult.errorCodes && recaptchaResult.errorCodes.includes('invalid-input-secret')) {
-        userMessage = 'reCAPTCHA configuration error. Please contact support.';
-      } else if (recaptchaResult.errorCodes && recaptchaResult.errorCodes.includes('invalid-input-response')) {
-        userMessage = 'reCAPTCHA verification expired. Please complete the verification again.';
+    // Verify reCAPTCHA token (only required for initial login, not for MFA verification)
+    // If mfaToken is provided, user already passed initial authentication, so skip reCAPTCHA
+    if (!mfaToken) {
+      if (!recaptchaToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'reCAPTCHA verification is required'
+        });
       }
+
+      // Get client IP address for reCAPTCHA verification
+      const clientIP = req.headers['x-forwarded-for']?.split(',')[0] || 
+                       req.headers['x-real-ip'] || 
+                       req.connection.remoteAddress || 
+                       req.socket.remoteAddress ||
+                       (req.connection.socket ? req.connection.socket.remoteAddress : null);
+
+      // Verify reCAPTCHA (v3 will check score automatically)
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken, clientIP);
       
-      return res.status(400).json({
-        success: false,
-        message: userMessage
-      });
+      if (!recaptchaResult.success) {
+        console.error('reCAPTCHA verification failed for login:', {
+          error: recaptchaResult.error,
+          errorCodes: recaptchaResult.errorCodes,
+          ip: clientIP
+        });
+        
+        // Provide user-friendly error message
+        let userMessage = 'reCAPTCHA verification failed. Please try again.';
+        if (recaptchaResult.errorCodes && recaptchaResult.errorCodes.includes('invalid-input-secret')) {
+          userMessage = 'reCAPTCHA configuration error. Please contact support.';
+        } else if (recaptchaResult.errorCodes && recaptchaResult.errorCodes.includes('invalid-input-response')) {
+          userMessage = 'reCAPTCHA verification expired. Please complete the verification again.';
+        }
+        
+        return res.status(400).json({
+          success: false,
+          message: userMessage
+        });
+      }
     }
 
-    // Check if user exists and get password and registeredWithGoogle flag
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password +registeredWithGoogle');
+    // Check if user exists and get password, registeredWithGoogle flag, and MFA fields
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+password +registeredWithGoogle +mfaSecret +mfaBackupCodes');
 
     if (!user) {
       console.log('Login attempt: User not found for email:', email.toLowerCase());
@@ -416,6 +424,52 @@ router.post('/login', [
         success: false,
         message: 'Please verify your email before logging in'
       });
+    }
+
+    // Check if MFA is enabled
+    if (user.mfaEnabled) {
+      // If MFA is enabled but no token provided, require MFA
+      if (!mfaToken) {
+        return res.status(200).json({
+          success: false,
+          mfaRequired: true,
+          message: 'Two-factor authentication code is required'
+        });
+      }
+
+      // Verify MFA token
+      let mfaValid = false;
+
+      // Try TOTP verification first
+      if (user.mfaSecret) {
+        mfaValid = speakeasy.totp.verify({
+          secret: user.mfaSecret,
+          encoding: 'base32',
+          token: mfaToken,
+          window: 2 // Allow 2 time steps (60 seconds) before/after current time
+        });
+      }
+
+      // If TOTP fails, try backup codes (6-digit numeric codes)
+      if (!mfaValid && user.mfaBackupCodes && user.mfaBackupCodes.length > 0) {
+        // Ensure mfaToken is a 6-digit number string for comparison
+        const normalizedToken = mfaToken.toString().trim();
+        const backupCodeIndex = user.mfaBackupCodes.indexOf(normalizedToken);
+        if (backupCodeIndex !== -1) {
+          // Remove used backup code
+          user.mfaBackupCodes.splice(backupCodeIndex, 1);
+          await user.save({ validateBeforeSave: false });
+          mfaValid = true;
+        }
+      }
+
+      if (!mfaValid) {
+        return res.status(401).json({
+          success: false,
+          mfaRequired: true,
+          message: 'Invalid two-factor authentication code. Please try again.'
+        });
+      }
     }
 
     // Update last login

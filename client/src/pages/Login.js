@@ -152,11 +152,12 @@ const Login = () => {
     }
 
     setLoading(true);
+    let recaptchaToken = null;
 
     try {
       // Execute reCAPTCHA v3 (invisible, automatic)
-      const token = await executeRecaptcha();
-      if (!token) {
+      recaptchaToken = await executeRecaptcha();
+      if (!recaptchaToken) {
         toast.error('Security verification couldn\'t be completed. Please refresh the page and try again.', {
           position: 'top-right',
           autoClose: 5000,
@@ -165,7 +166,23 @@ const Login = () => {
         return false;
       }
 
-      const response = await login(formData.email, formData.password, token);
+      const response = await login(formData.email, formData.password, recaptchaToken);
+
+      // Check if MFA is required
+      if (response.mfaRequired) {
+        // Navigate to separate MFA verification page
+        navigate('/verify-mfa', {
+          state: {
+            loginData: {
+              email: formData.email,
+              password: formData.password,
+              recaptchaToken: recaptchaToken
+            }
+          }
+        });
+        setLoading(false);
+        return false;
+      }
 
       if (response.success) {
         localStorage.setItem('token', response.token);
@@ -186,6 +203,24 @@ const Login = () => {
       }
     } catch (error) {
       console.error('Login error:', error);
+      
+      // Check if MFA is required in error response
+      if (error.response?.data?.mfaRequired) {
+        // Only navigate to MFA page if we have a recaptcha token
+        if (recaptchaToken) {
+          navigate('/verify-mfa', {
+            state: {
+              loginData: {
+                email: formData.email,
+                password: formData.password,
+                recaptchaToken: recaptchaToken
+              }
+            }
+          });
+          setLoading(false);
+          return false;
+        }
+      }
       
       // Use centralized error handler
       const errorMessage = formatErrorForDisplay(error);

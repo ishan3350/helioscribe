@@ -6,6 +6,7 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import VerifyEmail from './pages/VerifyEmail';
+import VerifyMFA from './pages/VerifyMFA';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyResetCode from './pages/VerifyResetCode';
 import ResetPassword from './pages/ResetPassword';
@@ -20,11 +21,12 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/verify-mfa" element={<VerifyMFA />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/verify-reset-code" element={<VerifyResetCode />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route
-              path="/dashboard"
+              path="/dashboard/*"
               element={
                 <PrivateRoute>
                   <Dashboard />

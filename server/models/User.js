@@ -112,6 +112,19 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false
   },
+  mfaSecret: {
+    type: String,
+    select: false
+  },
+  mfaEnabled: {
+    type: Boolean,
+    default: false
+  },
+  mfaBackupCodes: {
+    type: [String],
+    select: false,
+    default: []
+  },
   lastLogin: {
     type: Date
   },
