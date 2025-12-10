@@ -1,10 +1,13 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const generateResetToken = require('../utils/generateResetToken');
 const sendEmail = require('../utils/sendEmail');
-const { getVerificationEmailTemplate } = require('../utils/emailTemplates');
+const { getVerificationEmailTemplate, getPasswordResetEmailTemplate } = require('../utils/emailTemplates');
 const { protect } = require('../middleware/auth');
 const verifyRecaptcha = require('../utils/verifyRecaptcha');
 const { verifyGoogleToken } = require('../utils/googleAuth');
@@ -511,7 +514,15 @@ router.get('/google/register', async (req, res) => {
       });
     }
 
-    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI_REGISTER)}&response_type=code&scope=profile email&access_type=offline&prompt=consent`;
+    // Get fingerprint from query params and pass it through OAuth state parameter
+    const fingerprint = req.query.fingerprint || null;
+    const state = fingerprint ? encodeURIComponent(JSON.stringify({ fingerprint })) : '';
+    
+    let googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${process.env.GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(GOOGLE_REDIRECT_URI_REGISTER)}&response_type=code&scope=profile email&access_type=offline&prompt=consent`;
+    
+    if (state) {
+      googleAuthUrl += `&state=${state}`;
+    }
     
     res.redirect(googleAuthUrl);
   } catch (error) {
@@ -622,7 +633,7 @@ router.get('/google/callback', async (req, res) => {
 // @access  Public
 router.get('/google/callback/register', async (req, res) => {
   try {
-    const { code, error: oauthError } = req.query;
+    const { code, error: oauthError, state } = req.query;
 
     // Check if Google returned an error
     if (oauthError) {
@@ -633,6 +644,18 @@ router.get('/google/callback/register', async (req, res) => {
     if (!code) {
       console.error('No authorization code received from Google');
       return res.redirect(`${FRONTEND_URL}/register?error=google_auth_failed`);
+    }
+
+    // Extract fingerprint from state parameter if available
+    let deviceFingerprint = null;
+    if (state) {
+      try {
+        const stateData = JSON.parse(decodeURIComponent(state));
+        deviceFingerprint = stateData.fingerprint || null;
+      } catch (stateError) {
+        console.error('Error parsing state parameter:', stateError);
+        // Continue without fingerprint if state parsing fails
+      }
     }
 
     // Exchange code for tokens
@@ -664,8 +687,7 @@ router.get('/google/callback/register', async (req, res) => {
                      req.socket.remoteAddress ||
                      (req.connection.socket ? req.connection.socket.remoteAddress : null);
 
-    // Get fingerprint from query params if available
-    const deviceFingerprint = req.query.fingerprint || null;
+    // deviceFingerprint is already extracted from state parameter above
 
     // Check if user already exists
     const normalizedEmail = email.toLowerCase().trim();
@@ -713,6 +735,313 @@ router.get('/google/callback/register', async (req, res) => {
     console.error('Google OAuth registration callback error:', error);
     console.error('Error stack:', error.stack);
     res.redirect(`${FRONTEND_URL}/register?error=google_auth_failed`);
+  }
+});
+
+// @route   POST /api/auth/forgot-password
+// @desc    Request password reset code
+// @access  Public
+router.post('/forgot-password', [
+  body('email')
+    .isEmail().withMessage('Please enter a valid email')
+    .normalizeEmail()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase() });
+
+    // Security: Don't reveal if user exists or not, but check for Google registration
+    if (user) {
+      // Check if user registered with Google - ONLY check the registeredWithGoogle boolean field
+      if (user.registeredWithGoogle === true) {
+        return res.status(403).json({
+          success: false,
+          message: 'This account was registered using Google. Please sign in with Google instead.',
+          authMethod: 'google'
+        });
+      }
+
+      // If user exists and is NOT registered with Google, generate reset code and send email
+      // Generate password reset code
+      const resetCode = user.generatePasswordResetCode();
+      await user.save({ validateBeforeSave: false });
+
+      // Send password reset email
+      try {
+        await sendEmail({
+          email: user.email,
+          subject: 'Reset Your Password - HelioScribe',
+          html: getPasswordResetEmailTemplate(user.firstName, resetCode)
+        });
+        console.log(`Password reset code sent to: ${user.email}`);
+      } catch (emailError) {
+        console.error('Email sending error:', emailError);
+        console.error('Email error details:', {
+          message: emailError.message,
+          code: emailError.code,
+          response: emailError.response
+        });
+        // Clear the reset code if email fails
+        user.passwordResetCode = undefined;
+        user.passwordResetCodeExpire = undefined;
+        await user.save({ validateBeforeSave: false });
+        
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send password reset email. Please try again later.'
+        });
+      }
+    }
+
+    // Always return success message (security: don't reveal if email exists)
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset code has been sent.'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during password reset request'
+    });
+  }
+});
+
+// @route   POST /api/auth/verify-reset-code
+// @desc    Verify password reset code and get reset token
+// @access  Public
+router.post('/verify-reset-code', [
+  body('email')
+    .isEmail().withMessage('Please enter a valid email')
+    .normalizeEmail(),
+  body('code')
+    .notEmpty().withMessage('Reset code is required')
+    .isLength({ min: 6, max: 6 }).withMessage('Reset code must be 6 digits')
+    .matches(/^\d+$/).withMessage('Reset code must contain only numbers')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { email, code } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+
+    // Find user with reset code fields
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .select('+passwordResetCode +passwordResetCodeExpire');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user registered with Google - ONLY check the registeredWithGoogle boolean field
+    if (user.registeredWithGoogle === true) {
+      return res.status(403).json({
+        success: false,
+        message: 'This account was registered using Google. Please sign in with Google instead.',
+        authMethod: 'google'
+      });
+    }
+
+    // Check if reset code exists
+    if (!user.passwordResetCode || !user.passwordResetCodeExpire) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset code. Please request a new one.'
+      });
+    }
+
+    // Check if code is expired
+    if (user.passwordResetCodeExpire < Date.now()) {
+      // Clear expired code
+      user.passwordResetCode = undefined;
+      user.passwordResetCodeExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Reset code has expired. Please request a new one.'
+      });
+    }
+
+    // Verify reset code
+    if (user.passwordResetCode !== code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset code. Please check and try again.'
+      });
+    }
+
+    // Code is valid - generate secure reset token
+    const resetToken = generateResetToken(user._id, user.email);
+    
+    // Store token in database (for additional security - can verify token belongs to user)
+    user.passwordResetToken = resetToken;
+    user.passwordResetTokenExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    // Clear the code since it's been used
+    user.passwordResetCode = undefined;
+    user.passwordResetCodeExpire = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.status(200).json({
+      success: true,
+      message: 'Reset code verified successfully',
+      resetToken: resetToken
+    });
+  } catch (error) {
+    console.error('Verify reset code error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during code verification'
+    });
+  }
+});
+
+// @route   POST /api/auth/reset-password
+// @desc    Reset password using reset token (after code verification)
+// @access  Public
+router.post('/reset-password', [
+  body('resetToken')
+    .notEmpty().withMessage('Reset token is required'),
+  body('newPassword')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters')
+    .matches(/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/).withMessage('Password must contain uppercase, lowercase, and number')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { resetToken, newPassword } = req.body;
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+
+    // Verify and decode the reset token
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+      
+      // Verify token type
+      if (decoded.type !== 'password_reset') {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid reset token.'
+        });
+      }
+    } catch (tokenError) {
+      if (tokenError.name === 'TokenExpiredError') {
+        return res.status(400).json({
+          success: false,
+          message: 'Reset token has expired. Please request a new reset code.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset token.'
+      });
+    }
+
+    // Find user with reset token fields
+    const user = await User.findById(decoded.id)
+      .select('+passwordResetToken +passwordResetTokenExpire +password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify email matches (additional security)
+    if (user.email.toLowerCase() !== decoded.email.toLowerCase()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset token.'
+      });
+    }
+
+    // Check if user registered with Google
+    if (user.registeredWithGoogle === true) {
+      return res.status(403).json({
+        success: false,
+        message: 'This account was registered using Google. Please sign in with Google instead.',
+        authMethod: 'google'
+      });
+    }
+
+    // Verify token exists in database and matches
+    if (!user.passwordResetToken || user.passwordResetToken !== resetToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token. Please request a new reset code.'
+      });
+    }
+
+    // Check if token is expired in database
+    if (!user.passwordResetTokenExpire || user.passwordResetTokenExpire < Date.now()) {
+      // Clear expired token
+      user.passwordResetToken = undefined;
+      user.passwordResetTokenExpire = undefined;
+      await user.save({ validateBeforeSave: false });
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token has expired. Please request a new reset code.'
+      });
+    }
+
+    // Update password and clear reset token (one-time use)
+    // Hash password manually using bcrypt with 12 salt rounds (same as registration/login)
+    // We use findByIdAndUpdate to bypass pre-save hook and prevent double-hashing
+    const salt = await bcrypt.genSalt(12);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    
+    // Update user directly with hashed password, bypassing pre-save hook
+    await User.findByIdAndUpdate(
+      user._id,
+      {
+        password: hashedPassword,
+        passwordResetToken: undefined,
+        passwordResetTokenExpire: undefined
+      },
+      { 
+        new: true,
+        runValidators: false // Skip validators since we're manually hashing
+      }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully. You can now sign in with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during password reset'
+    });
   }
 });
 

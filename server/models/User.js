@@ -96,6 +96,22 @@ const userSchema = new mongoose.Schema({
     type: Date,
     select: false
   },
+  passwordResetCode: {
+    type: String,
+    select: false
+  },
+  passwordResetCodeExpire: {
+    type: Date,
+    select: false
+  },
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetTokenExpire: {
+    type: Date,
+    select: false
+  },
   lastLogin: {
     type: Date
   },
@@ -137,6 +153,15 @@ userSchema.methods.generateVerificationCode = function() {
   this.emailVerificationCode = code;
   const expireMinutes = parseInt(process.env.VERIFICATION_CODE_EXPIRE) || 15;
   this.emailVerificationCodeExpire = Date.now() + expireMinutes * 60 * 1000;
+  return code;
+};
+
+// Method to generate password reset code
+userSchema.methods.generatePasswordResetCode = function() {
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  this.passwordResetCode = code;
+  const expireMinutes = parseInt(process.env.PASSWORD_RESET_CODE_EXPIRE) || 15;
+  this.passwordResetCodeExpire = Date.now() + expireMinutes * 60 * 1000;
   return code;
 };
 

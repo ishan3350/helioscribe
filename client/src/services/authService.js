@@ -38,3 +38,24 @@ export const loginWithGoogle = async (idToken, deviceFingerprint) => {
   return response.data;
 };
 
+export const forgotPassword = async (email) => {
+  const response = await api.post('/auth/forgot-password', { email });
+  return response.data;
+};
+
+export const verifyResetCode = async (email, code) => {
+  const response = await api.post('/auth/verify-reset-code', { 
+    email, 
+    code 
+  });
+  return response.data;
+};
+
+export const resetPassword = async (resetToken, newPassword) => {
+  const response = await api.post('/auth/reset-password', { 
+    resetToken, 
+    newPassword 
+  });
+  return response.data;
+};
+
