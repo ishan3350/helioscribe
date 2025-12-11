@@ -353,6 +353,134 @@
   display: none;
 }
 
+/* Submenu Styles */
+.nav-menu-group {
+  width: 100%;
+}
+
+.nav-menu-toggle {
+  position: relative;
+}
+
+.nav-menu-toggle.expanded .nav-chevron {
+  transform: rotate(90deg);
+}
+
+.nav-chevron {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-origin: center;
+}
+
+.nav-menu-toggle.expanded {
+  background: #e8f0fe;
+  color: #1a73e8;
+}
+
+.nav-menu-toggle.expanded .nav-icon {
+  color: #1a73e8;
+}
+
+.nav-menu-toggle.expanded .nav-chevron {
+  color: #1a73e8;
+  opacity: 1;
+}
+
+.nav-submenu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+  opacity: 0;
+  padding-left: 8px;
+}
+
+.nav-submenu.expanded {
+  max-height: 300px;
+  opacity: 1;
+  margin-top: 4px;
+}
+
+.nav-subitem {
+  padding-left: 40px !important;
+  position: relative;
+  min-height: 36px;
+}
+
+.nav-subitem::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #dadce0;
+  transform: translateY(-50%);
+  transition: background 0.15s ease;
+}
+
+.nav-subitem.active::before {
+  background: #1a73e8;
+}
+
+.nav-subitem:hover::before {
+  background: #bdc1c6;
+}
+
+.nav-subitem.active:hover::before {
+  background: #1557b0;
+}
+
+.nav-subitem-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: inherit;
+  transition: color 0.15s ease;
+  margin-left: -8px;
+}
+
+.nav-subitem-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nav-subitem .nav-label {
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.nav-subitem.active {
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+.nav-subitem.active .nav-subitem-icon {
+  color: #1a73e8;
+}
+
+.nav-subitem:hover {
+  background: #f1f3f4;
+}
+
+.nav-subitem.active:hover {
+  background: #d2e3fc;
+}
+
+.sidebar.collapsed .nav-submenu {
+  display: none;
+}
+
+.sidebar.collapsed .nav-menu-toggle .nav-chevron {
+  display: none;
+}
+
 /* Sidebar Footer - User Section */
 .sidebar-footer {
   padding: 16px 20px;

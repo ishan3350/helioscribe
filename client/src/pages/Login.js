@@ -30,7 +30,7 @@ const Login = () => {
       } else if (error === 'google_auth_no_email') {
         errorMessage = 'We couldn\'t retrieve your email address from Google. Please ensure your Google account has a verified email address.';
       } else if (error === 'google_auth_not_registered') {
-        errorMessage = 'This account hasn\'t been registered yet. Please create an account first using the "Create one" link below.';
+        errorMessage = 'This account hasn\'t been registered yet. Please register first by clicking "Create one here" below, or use your email and password if you already have an account.';
       } else if (error === 'google_auth_already_registered') {
         errorMessage = 'This email is already registered. Please sign in with your password or use the Google sign-in option.';
       } else if (error === 'google_auth_email_not_verified') {

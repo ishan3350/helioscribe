@@ -7,11 +7,21 @@ const Sidebar = ({ user, onLogout }) => {
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState([]);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  // Auto-expand Settings menu if we're on a settings route
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard/settings')) {
+      if (!expandedMenus.includes('settings')) {
+        setExpandedMenus([...expandedMenus, 'settings']);
+      }
+    }
+  }, [location.pathname, expandedMenus]);
 
   // Handle window resize
   useEffect(() => {
@@ -49,12 +59,23 @@ const Sidebar = ({ user, onLogout }) => {
     {
       id: 'settings',
       label: 'Settings',
-      path: '/dashboard/settings/security',
       icon: (
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19.14 12.94C19.18 12.64 19.2 12.33 19.2 12C19.2 11.67 19.18 11.36 19.14 11.06L21.16 9.37C21.34 9.22 21.4 8.97 21.3 8.74L19.3 5.26C19.2 5.03 18.97 4.88 18.73 4.88H15.07C14.7 4.54 14.3 4.25 13.87 4.02L13.49 0.74C13.46 0.5 13.25 0.32 13.01 0.32H10.99C10.75 0.32 10.54 0.5 10.51 0.74L10.13 4.02C9.7 4.25 9.3 4.54 8.93 4.88H5.27C5.03 4.88 4.8 5.03 4.7 5.26L2.7 8.74C2.6 8.97 2.66 9.22 2.84 9.37L4.86 11.06C4.82 11.36 4.8 11.67 4.8 12C4.8 12.33 4.82 12.64 4.86 12.94L2.84 14.63C2.66 14.78 2.6 15.03 2.7 15.26L4.7 18.74C4.8 18.97 5.03 19.12 5.27 19.12H8.93C9.3 19.46 9.7 19.75 10.13 19.98L10.51 23.26C10.54 23.5 10.75 23.68 10.99 23.68H13.01C13.25 23.68 13.46 23.5 13.49 23.26L13.87 19.98C14.3 19.75 14.7 19.46 15.07 19.12H18.73C18.97 19.12 19.2 18.97 19.3 18.74L21.3 15.26C21.4 15.03 21.34 14.78 21.16 14.63L19.14 12.94ZM12 15.6C10.02 15.6 8.4 13.98 8.4 12C8.4 10.02 10.02 8.4 12 8.4C13.98 8.4 15.6 10.02 15.6 12C15.6 13.98 13.98 15.6 12 15.6Z" fill="currentColor"/>
         </svg>
-      )
+      ),
+      submenu: [
+        {
+          id: 'security',
+          label: 'Security',
+          path: '/dashboard/settings/security',
+          icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 1L3 5V11C3 16.55 6.84 21.74 12 23C17.16 21.74 21 16.55 21 11V5L12 1ZM12 7C13.4 7 14.8 8.6 14.8 10V11.5C15.4 11.5 16 12.1 16 12.7V17.7C16 18.3 15.4 18.9 14.8 18.9H9.2C8.6 18.9 8 18.3 8 17.7V12.7C8 12.1 8.6 11.5 9.2 11.5V10C9.2 8.6 10.6 7 12 7ZM12 8.2C11.2 8.2 10.5 8.7 10.5 10V11.5H13.5V10C13.5 8.7 12.8 8.2 12 8.2Z" fill="currentColor"/>
+            </svg>
+          )
+        }
+      ]
     },
     {
       id: 'help',
@@ -76,6 +97,8 @@ const Sidebar = ({ user, onLogout }) => {
   };
 
   const isActive = (path) => {
+    if (!path) return false;
+    
     const currentPath = location.pathname;
     
     // Normalize paths (remove trailing slashes for comparison)
@@ -108,6 +131,24 @@ const Sidebar = ({ user, onLogout }) => {
 
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
+    // Close all expanded menus when collapsing
+    if (!isCollapsed) {
+      setExpandedMenus([]);
+    }
+  };
+
+  const toggleMenu = (menuId) => {
+    if (isCollapsed) return;
+    
+    if (expandedMenus.includes(menuId)) {
+      setExpandedMenus(expandedMenus.filter(id => id !== menuId));
+    } else {
+      setExpandedMenus([...expandedMenus, menuId]);
+    }
+  };
+
+  const isMenuExpanded = (menuId) => {
+    return expandedMenus.includes(menuId);
   };
 
   return (
@@ -164,22 +205,67 @@ const Sidebar = ({ user, onLogout }) => {
             <ul className="nav-list main-nav">
               {mainNavItems.map((item) => (
                 <li key={item.id}>
-                  <button
-                    className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-                    onClick={() => handleNavigation(item.path)}
-                    aria-label={item.label}
-                    title={isCollapsed ? item.label : ''}
-                  >
-                    <span className="nav-icon">{item.icon}</span>
-                    {!isCollapsed && (
-                      <>
-                        <span className="nav-label">{item.label}</span>
-                        <svg className="nav-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                          <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z" fill="currentColor"/>
-                        </svg>
-                      </>
-                    )}
-                  </button>
+                  {item.submenu ? (
+                    <div className="nav-menu-group">
+                      <button
+                        className={`nav-item nav-menu-toggle ${item.submenu.some(sub => isActive(sub.path)) ? 'active' : ''} ${isMenuExpanded(item.id) ? 'expanded' : ''}`}
+                        onClick={() => toggleMenu(item.id)}
+                        aria-label={item.label}
+                        aria-expanded={isMenuExpanded(item.id)}
+                        title={isCollapsed ? item.label : ''}
+                      >
+                        <span className="nav-icon">{item.icon}</span>
+                        {!isCollapsed && (
+                          <>
+                            <span className="nav-label">{item.label}</span>
+                            <svg 
+                              className={`nav-arrow nav-chevron ${isMenuExpanded(item.id) ? 'expanded' : ''}`} 
+                              width="20" 
+                              height="20" 
+                              viewBox="0 0 24 24" 
+                              fill="none" 
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path d="M10 6L8.59 7.41L13.17 12L8.59 16.59L10 18L16 12L10 6Z" fill="currentColor"/>
+                            </svg>
+                          </>
+                        )}
+                      </button>
+                      {!isCollapsed && item.submenu && (
+                        <ul className={`nav-submenu ${isMenuExpanded(item.id) ? 'expanded' : ''}`}>
+                          {item.submenu.map((subItem) => (
+                            <li key={subItem.id}>
+                              <button
+                                className={`nav-item nav-subitem ${isActive(subItem.path) ? 'active' : ''}`}
+                                onClick={() => handleNavigation(subItem.path)}
+                                aria-label={subItem.label}
+                              >
+                                <span className="nav-subitem-icon">{subItem.icon}</span>
+                                <span className="nav-label">{subItem.label}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ) : (
+                    <button
+                      className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+                      onClick={() => handleNavigation(item.path)}
+                      aria-label={item.label}
+                      title={isCollapsed ? item.label : ''}
+                    >
+                      <span className="nav-icon">{item.icon}</span>
+                      {!isCollapsed && (
+                        <>
+                          <span className="nav-label">{item.label}</span>
+                          <svg className="nav-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8.59 16.59L13.17 12L8.59 7.41L10 6L16 12L10 18L8.59 16.59Z" fill="currentColor"/>
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>
