@@ -107,7 +107,20 @@ router.post('/', [
 
     // Create Qdrant collection for this website
     try {
-      const qdrantUrl = `http://91.99.202.14:6333/collections/${websiteId}`;
+      const qdrantBaseUrl = process.env.QDRANT_URL || 'http://91.99.202.14:6333';
+      const qdrantApiKey = process.env.QDRANT_API_KEY;
+      
+      if (!qdrantApiKey) {
+        console.error('QDRANT_API_KEY is not set in environment variables');
+        // Delete the website from MongoDB since Qdrant setup failed
+        await Website.findByIdAndDelete(website._id);
+        return res.status(500).json({
+          success: false,
+          message: 'Qdrant service is not properly configured. Please contact support.'
+        });
+      }
+
+      const qdrantUrl = `${qdrantBaseUrl}/collections/${websiteId}`;
       await axios.put(qdrantUrl, {
         vectors: {
           size: 2560,
@@ -130,18 +143,29 @@ router.post('/', [
       }, {
         headers: {
           "Content-Type": "application/json",
-          "api-key": "6QL1XGQ3OP2CEW7DA9E6KLWDM74TFC0NJD0W43DO6YGNG5EBVE"
+          "api-key": qdrantApiKey
         }
       });
     } catch (qdrantError) {
       // If Qdrant API call failed, delete the website from MongoDB
       await Website.findByIdAndDelete(website._id);
       
-      console.error('Qdrant collection creation failed:', qdrantError.response?.data || qdrantError.message);
+      const errorMessage = qdrantError.response?.data || qdrantError.message || 'Unknown error';
+      console.error('Qdrant collection creation failed:', errorMessage);
+      
+      // Provide more specific error message
+      let userMessage = 'We encountered an issue while setting up your website. Please try again in a few moments.';
+      if (qdrantError.response?.status === 401 || qdrantError.response?.status === 403) {
+        userMessage = 'Authentication failed with Qdrant service. Please contact support.';
+      } else if (qdrantError.code === 'ECONNREFUSED' || qdrantError.code === 'ETIMEDOUT') {
+        userMessage = 'Unable to connect to Qdrant service. Please try again later or contact support.';
+      } else if (errorMessage.includes('not configured') || errorMessage.includes('QDRANT_API_KEY')) {
+        userMessage = 'Qdrant service is not properly configured. Please contact support.';
+      }
       
       return res.status(500).json({
         success: false,
-        message: 'We encountered an issue while setting up your website. Please try again in a few moments. If the problem persists, contact support.'
+        message: userMessage
       });
     }
 
@@ -235,12 +259,17 @@ router.delete('/:id', protect, async (req, res) => {
 
     // Delete Qdrant collection
     try {
-      const qdrantUrl = `http://91.99.202.14:6333/collections/${website.websiteId}`;
-      await axios.delete(qdrantUrl, {
-        headers: {
-          "api-key": "6QL1XGQ3OP2CEW7DA9E6KLWDM74TFC0NJD0W43DO6YGNG5EBVE"
-        }
-      });
+      const qdrantBaseUrl = process.env.QDRANT_URL || 'http://91.99.202.14:6333';
+      const qdrantApiKey = process.env.QDRANT_API_KEY;
+      
+      if (qdrantApiKey) {
+        const qdrantUrl = `${qdrantBaseUrl}/collections/${website.websiteId}`;
+        await axios.delete(qdrantUrl, {
+          headers: {
+            "api-key": qdrantApiKey
+          }
+        });
+      }
     } catch (qdrantError) {
       // Log error but continue with MongoDB deletion
       console.error('Qdrant collection deletion failed:', qdrantError.response?.data || qdrantError.message);

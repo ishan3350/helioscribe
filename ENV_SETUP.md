@@ -38,6 +38,10 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Email Verification
 VERIFICATION_CODE_EXPIRE=15
+
+# Qdrant Configuration
+QDRANT_URL=http://91.99.202.14:6333
+QDRANT_API_KEY=your-qdrant-api-key-here
 ```
 
 ### Frontend (`client/.env`)
