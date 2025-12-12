@@ -93,3 +93,14 @@ export const disableMFA = async (password) => {
   return response.data;
 };
 
+// Website Management
+export const addWebsite = async (websiteData) => {
+  const response = await api.post('/websites', websiteData);
+  return response.data;
+};
+
+export const getWebsites = async () => {
+  const response = await api.get('/websites');
+  return response.data;
+};
+

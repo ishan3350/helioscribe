@@ -114,8 +114,18 @@ export const extractErrorMessage = (error) => {
       break;
     case 409:
       title = 'Already Exists';
-      if (!message || message.includes('already')) {
-        message = 'This information already exists in our system. Please use a different value or sign in if you already have an account.';
+      // Use the specific message from backend if provided (it's usually very clear)
+      if (!originalMessage || originalMessage === message || (!message || message.includes('This information already exists'))) {
+        // Only use generic message if no specific message was provided
+        if (!message || message.includes('This information already exists')) {
+          message = 'This information already exists in our system. Please use a different value or sign in if you already have an account.';
+        } else {
+          // Use the specific message from backend
+          message = originalMessage || message;
+        }
+      } else {
+        // Backend provided a specific message, use it
+        message = originalMessage;
       }
       break;
     case 422:

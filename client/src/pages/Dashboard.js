@@ -5,6 +5,7 @@ import { getDashboardData } from '../services/authService';
 import { formatErrorForDisplay } from '../utils/errorHandler';
 import Sidebar from '../components/Sidebar';
 import Security from './Security';
+import AddWebsite from './AddWebsite';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -109,6 +110,7 @@ const Dashboard = () => {
           <Routes>
             <Route path="/" element={<DashboardHome user={user} formatDate={formatDate} />} />
             <Route path="settings/security" element={<Security />} />
+            <Route path="websites/add" element={<AddWebsite />} />
           </Routes>
         </main>
       </div>

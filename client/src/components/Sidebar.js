@@ -14,11 +14,16 @@ const Sidebar = ({ user, onLogout }) => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  // Auto-expand Settings menu if we're on a settings route
+  // Auto-expand menus if we're on their routes
   useEffect(() => {
     if (location.pathname.startsWith('/dashboard/settings')) {
       if (!expandedMenus.includes('settings')) {
         setExpandedMenus([...expandedMenus, 'settings']);
+      }
+    }
+    if (location.pathname.startsWith('/dashboard/websites')) {
+      if (!expandedMenus.includes('websites')) {
+        setExpandedMenus([...expandedMenus, 'websites']);
       }
     }
   }, [location.pathname, expandedMenus]);
@@ -55,6 +60,29 @@ const Sidebar = ({ user, onLogout }) => {
           <path d="M12 12C14.21 12 16 10.21 16 8C16 5.79 14.21 4 12 4C9.79 4 8 5.79 8 8C8 10.21 9.79 12 12 12ZM12 14C9.33 14 4 15.34 4 18V20H20V18C20 15.34 14.67 14 12 14Z" fill="currentColor"/>
         </svg>
       )
+    },
+    {
+      id: 'websites',
+      label: 'Websites',
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 4H4C2.89 4 2.01 4.89 2.01 6L2 18C2 19.11 2.89 20 4 20H20C21.11 20 22 19.11 22 18V6C22 4.89 21.11 4 20 4ZM20 18H4V8H20V18ZM20 6H4V8H20V6Z" fill="currentColor"/>
+          <path d="M6 10H18V12H6V10ZM6 14H14V16H6V14Z" fill="currentColor"/>
+        </svg>
+      ),
+      submenu: [
+        {
+          id: 'add-website',
+          label: 'Add Website',
+          path: '/dashboard/websites/add',
+          icon: (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="currentColor"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="currentColor"/>
+            </svg>
+          )
+        }
+      ]
     },
     {
       id: 'settings',
