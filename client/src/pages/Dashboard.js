@@ -6,6 +6,7 @@ import { formatErrorForDisplay } from '../utils/errorHandler';
 import Sidebar from '../components/Sidebar';
 import Security from './Security';
 import AddWebsite from './AddWebsite';
+import ManageWebsites from './ManageWebsites';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -111,6 +112,7 @@ const Dashboard = () => {
             <Route path="/" element={<DashboardHome user={user} formatDate={formatDate} />} />
             <Route path="settings/security" element={<Security />} />
             <Route path="websites/add" element={<AddWebsite />} />
+            <Route path="websites/manage" element={<ManageWebsites />} />
           </Routes>
         </main>
       </div>

@@ -212,5 +212,56 @@ router.get('/', protect, async (req, res) => {
   }
 });
 
+// @route   DELETE /api/websites/:id
+// @desc    Delete a website and its Qdrant collection
+// @access  Private
+router.delete('/:id', protect, async (req, res) => {
+  try {
+    const websiteId = req.params.id;
+    const userEmail = req.user.email.toLowerCase().trim();
+
+    // Find the website and verify ownership
+    const website = await Website.findOne({ 
+      _id: websiteId,
+      website_owner: userEmail 
+    });
+
+    if (!website) {
+      return res.status(404).json({
+        success: false,
+        message: 'Website not found or you do not have permission to delete it.'
+      });
+    }
+
+    // Delete Qdrant collection
+    try {
+      const qdrantUrl = `http://91.99.202.14:6333/collections/${website.websiteId}`;
+      await axios.delete(qdrantUrl, {
+        headers: {
+          "api-key": "6QL1XGQ3OP2CEW7DA9E6KLWDM74TFC0NJD0W43DO6YGNG5EBVE"
+        }
+      });
+    } catch (qdrantError) {
+      // Log error but continue with MongoDB deletion
+      console.error('Qdrant collection deletion failed:', qdrantError.response?.data || qdrantError.message);
+      // Continue with MongoDB deletion even if Qdrant fails
+    }
+
+    // Delete from MongoDB
+    await Website.findByIdAndDelete(websiteId);
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully deleted ${website.domain}. The website and its associated data have been removed.`
+    });
+  } catch (error) {
+    console.error('Delete website error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'We encountered an issue while deleting the website. Please try again in a few moments.'
+    });
+  }
+});
+
 module.exports = router;
 

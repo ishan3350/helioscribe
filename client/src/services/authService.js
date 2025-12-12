@@ -104,3 +104,8 @@ export const getWebsites = async () => {
   return response.data;
 };
 
+export const deleteWebsite = async (websiteId) => {
+  const response = await api.delete(`/websites/${websiteId}`);
+  return response.data;
+};
+
